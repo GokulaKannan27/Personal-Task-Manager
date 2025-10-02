@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>My Tasks</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;
+    }
+    .priority-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
+    .priority-dot-high { background-color: #EF9A9A; }
+    .priority-dot-medium { background-color: #FFD54F; }
+    .priority-dot-low { background-color: #A5D6A7; }
+
+    .custom-checkbox {
+      appearance: none;
+      width: 1.25rem; height: 1.25rem;
+      border-radius: 0.25rem;
+      border: 2px solid #dbe0e6;
+      cursor: pointer; position: relative;
+    }
+    .custom-checkbox:checked {
+      background-color: #64B5F6; border-color: #64B5F6;
+    }
+    .custom-checkbox:checked::after {
+      content: '✓'; color: white; font-size: 1rem;
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+    }
+  </style>
+</head>
+<body class="bg-[#F8F8F8]">
+<div class="flex h-auto min-h-screen flex-col">
+  <div class="px-4 md:px-20 lg:px-40 flex flex-1 justify-center py-5">
+    <div class="flex flex-col max-w-4xl flex-1">
+      
+      <!-- Header -->
+      <header class="flex items-center justify-between border-b border-[#f0f2f4] px-4 sm:px-10 py-4 bg-white rounded-t-lg">
+        <div class="flex items-center gap-4 text-[#333333]">
+          <h2 class="text-xl font-bold">My Tasks</h2>
+        </div>
+        <button class="flex items-center justify-center rounded-full h-10 w-10 bg-[#f0f2f4] text-[#333333]">
+          <span class="material-symbols-outlined text-2xl">person</span>
+        </button>
+      </header>
+
+      <!-- Main -->
+      <main class="flex flex-col flex-1 bg-white px-4 sm:px-10 py-6 rounded-b-lg shadow-sm">
+        
+        <!-- Add Task -->
+        <div class="flex gap-3 mb-6">
+          <input id="title" type="text" placeholder="Task title" class="flex-1 rounded-lg border px-3 py-2 text-sm"/>
+          <input id="description" type="text" placeholder="Description" class="flex-1 rounded-lg border px-3 py-2 text-sm"/>
+          <button onclick="addTask()" class="flex items-center gap-2 rounded-lg h-10 px-4 bg-[#64B5F6] text-white font-bold hover:bg-blue-400">
+            <span class="material-symbols-outlined">add</span> Add
+          </button>
+        </div>
+
+        <!-- Task List -->
+        <div id="taskList" class="flex flex-col gap-1">
+          <!-- Tasks will be injected here -->
+        </div>
+
+      </main>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API_URL = "http://localhost:8085/api/tasks";
+
+  // Load all tasks
+  async function loadTasks() {
+    const res = await fetch(API_URL);
+    const tasks = await res.json();
+    const taskList = document.getElementById("taskList");
+    taskList.innerHTML = "";
+
+    if (tasks.length === 0) {
+      taskList.innerHTML = `<div class="text-center py-6 text-gray-500">No tasks found. Add one above!</div>`;
+      return;
+    }
+
+    tasks.forEach(task => {
+      const div = document.createElement("div");
+      div.className = "flex items-center gap-4 bg-white px-4 py-3 justify-between border-b border-gray-100 hover:bg-gray-50 rounded-lg";
+
+      div.innerHTML = `
+        <div class="flex items-center gap-4 flex-1">
+          <input type="checkbox" class="custom-checkbox" ${task.completed ? "checked" : ""} onchange="toggleTask(${task.id}, this.checked)">
+          <div class="flex flex-col">
+            <p class="${task.completed ? 'line-through text-gray-500' : 'text-[#333]'} text-base font-medium">${task.title}</p>
+            <p class="text-sm text-gray-500">${task.description || ""}</p>
+          </div>
+        </div>
+        <div class="flex gap-2 text-gray-400">
+          <button onclick="deleteTask(${task.id})" class="p-1 hover:text-red-500">
+            <span class="material-symbols-outlined text-xl">delete</span>
+          </button>
+        </div>
+      `;
+      taskList.appendChild(div);
+    });
+  }
+
+  // Add Task
+  async function addTask() {
+    const title = document.getElementById("title").value.trim();
+    const description = document.getElementById("description").value.trim();
+    if (!title) return alert("Please enter a task title!");
+
+    await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, description })
+    });
+
+    document.getElementById("title").value = "";
+    document.getElementById("description").value = "";
+    loadTasks();
+  }
+
+  // Toggle Task Completion
+  async function toggleTask(id, completed) {
+    await fetch(`${API_URL}/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ completed })
+    });
+    loadTasks();
+  }
+
+  // Delete Task
+  async function deleteTask(id) {
+    await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+    loadTasks();
+  }
+
+  // Initial Load
+  loadTasks();
+</script>
+</body>
+</html>
